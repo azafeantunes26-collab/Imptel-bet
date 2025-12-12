@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>IMPTEL – Biblioteca Online (Beta)</title>
+<style>
+    body{font-family:Arial;background:#eef2f7;margin:0;padding:20px}
+    .box{max-width:420px;margin:40px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 0 10px #0003}
+    input,button{width:100%;padding:10px;margin-top:10px;border-radius:6px;border:1px solid #ccc}
+    button{background:#0066ff;color:white;border:none;cursor:pointer}
+    .item{padding:10px;border:1px solid #ddd;margin-top:10px;border-radius:6px;background:#fafafa}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="box">
+    <h2>IMPTEL – Login Online (Beta)</h2>
+    <input id="email" placeholder="Email">
+    <input id="pass" type="password" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+    <button onclick="signup()">Criar Conta</button>
+    <p id="msg"></p>
+    <hr>
+    <p>Admin teste: <b>admin@imptel</b> / <b>123</b></p>
+</div>
+
+<!-- APP -->
+<div id="app" class="box" style="display:none">
+    <h2>Biblioteca IMPTEL</h2>
+    <p>Logado como: <b id="userLabel"></b></p>
+    <button onclick="logout()">Sair</button>
+
+    <h3>Adicionar PDF</h3>
+    <input type="file" id="fileInput" accept="application/pdf">
+    <input id="titleInput" placeholder="Título do material">
+    <button onclick="addPDF()">Adicionar</button>
+
+    <h3>Materiais</h3>
+    <div id="list"></div>
+</div>
+
+<script>
+let users = JSON.parse(localStorage.getItem("imptel_users") || "[]");
+let current = JSON.parse(localStorage.getItem("imptel_current") || "null");
+let materials = JSON.parse(localStorage.getItem("imptel_materials") || "[]");
+
+// criar admin padrão se não existir
+if(!users.some(u => u.email === "admin@imptel")){
+    users.push({email:"admin@imptel", pass:"123"});
+    localStorage.setItem("imptel_users", JSON.stringify(users));
+}
+
+// mostrar dados se já estiver logado
+if(current){ showApp(); }
+
+function login(){
+    let email = document.getElementById("email").value;
+    let pass = document.getElementById("pass").value;
+
+    let user = users.find(u => u.email === email && u.pass === pass);
+
+    if(user){
+        current = user;
+        localStorage.setItem("imptel_current", JSON.stringify(user));
+        showApp();
+    } else {
+        document.getElementById("msg").innerText = "Credenciais inválidas!";
+    }
+}
+
+function signup(){
+    let email = document.getElementById("email").value;
+    let pass = document.getElementById("pass").value;
+
+    if(users.some(u => u.email === email)){
+        document.getElementById("msg").innerText = "Email já existe!";
+        return;
+    }
+
+    users.push({email, pass});
+    localStorage.setItem("imptel_users", JSON.stringify(users));
+    document.getElementById("msg").innerText = "Conta criada!";
+}
+
+function logout(){
+    current = null;
+    localStorage.removeItem("imptel_current");
+    document.getElementById("app").style.display = "none";
+    document.getElementById("login").style.display = "block";
+}
+
+function showApp(){
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    document.getElementById("userLabel").innerText = current.email;
+    render();
+}
+
+function addPDF(){
+    let file = document.getElementById("fileInput").files[0];
+    let title = document.getElementById("titleInput").value;
+
+    if(!file || !title){
+        alert("Preencha tudo!");
+        return;
+    }
+
+    let reader = new FileReader();
+    reader.onload = function(e){
+        materials.push({
+            title,
+            data: e.target.result
+        });
+        localStorage.setItem("imptel_materials", JSON.stringify(materials));
+        render();
+    };
+
+    reader.readAsDataURL(file);
+}
+
+function render(){
+    let html = "";
+    materials.forEach((m,i)=>{
+        html += `
+        <div class="item">
+            <b>${m.title}</b><br>
+            <a href="${m.data}" target="_blank">Abrir PDF</a><br>
+            <button onclick="removePDF(${i})">Remover</button>
+        </div>`;
+    });
+
+    document.getElementById("list").innerHTML = html;
+}
+
+function removePDF(i){
+    materials.splice(i,1);
+    localStorage.setItem("imptel_materials", JSON.stringify(materials));
+    render();
+}
+</script>
+
+</body>
+</html>
